@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator  # or python_operator for older versions
+from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import requests
 import os
@@ -34,7 +34,7 @@ def getUpload():
         local_path = os.path.join(temp_dir, file_name)
 
         r = requests.get(url)
-        r.raise_for_status()  # raises an error if download fails
+        r.raise_for_status()
 
         with open(local_path, "wb") as f:
             f.write(r.content)
@@ -53,10 +53,11 @@ default_args = {
 }
 
 with DAG(
-    "github_to_minio_pipeline",
+    dag_id="github_to_minio_pipeline",
     default_args=default_args,
+    description="A DAG to upload files from GitHub to MinIO",
     start_date=datetime(2023, 1, 1),
-    schedule_interval="@daily",
+    schedule="@daily",
     catchup=False
 ) as dag:
     task1 = PythonOperator(
