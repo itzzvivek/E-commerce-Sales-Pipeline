@@ -6,10 +6,17 @@ import os
 from minio import Minio
 
 
+
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "mini123")
+
+
+
 minio_client = Minio(
-    "minio:9000",
-    access_key="minio",
-    secret_key="mini123",
+    MINIO_ENDPOINT.replace("http://", "").replace("https://", ""),
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
     secure=False
 )
 
@@ -24,14 +31,11 @@ GITHUB_FILES = [
 ]
 
 def getUpload():
-    temp_dir = "/tmp"
-    os.makedirs(temp_dir, exist_ok=True)
-
     bucket_name = 'ecommerce-data'
 
     for url in GITHUB_FILES:
         file_name = url.split("/")[-1]
-        local_path = os.path.join(temp_dir, file_name)
+        local_path = f"/tmp/{file_name}"
 
         r = requests.get(url)
         r.raise_for_status()
@@ -43,21 +47,15 @@ def getUpload():
             minio_client.make_bucket(bucket_name)
 
         minio_client.fput_object(bucket_name, file_name, local_path)
-        print(f"Uploaded {file_name} to MinIO")
-
-
-# default_args = {
-#     'owner': 'vivek',
-#     'retries': 5,
-#     'retry_delay': timedelta(minutes=2)
-# }
+        print(f"Uploaded {file_name} to MinIO '{bucket_name}' bucket.")
 
 with DAG(
     dag_id="github_to_minio_pipeline",
     description="A DAG to upload files from GitHub to MinIO",
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
-    catchup=False
+    catchup=False,
+    tags=["ecommerce", "minio", "etl"],
 ) as dag:
     task1 = PythonOperator(
         task_id="upload_github_files",
