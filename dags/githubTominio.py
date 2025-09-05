@@ -8,8 +8,8 @@ from minio import Minio
 
 minio_client = Minio(
     "minio:9000",
-    access_key="minioadmin",
-    secret_key="minioadmin",
+    access_key="minio",
+    secret_key="mini123",
     secure=False
 )
 
@@ -46,15 +46,14 @@ def getUpload():
         print(f"Uploaded {file_name} to MinIO")
 
 
-default_args = {
-    'owner': 'vivek',
-    'retries': 5,
-    'retry_delay': timedelta(minutes=2)
-}
+# default_args = {
+#     'owner': 'vivek',
+#     'retries': 5,
+#     'retry_delay': timedelta(minutes=2)
+# }
 
 with DAG(
     dag_id="github_to_minio_pipeline",
-    default_args=default_args,
     description="A DAG to upload files from GitHub to MinIO",
     start_date=datetime(2023, 1, 1),
     schedule="@daily",

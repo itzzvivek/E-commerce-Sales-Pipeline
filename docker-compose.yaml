@@ -62,11 +62,11 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
-    AIRFLOW__CORE__PARALLELISM: 4
-    AIRFLOW__CORE__DAG_CONCURRENCY: 4
-    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 1
+    # AIRFLOW__CORE__PARALLELISM: 4
+    # AIRFLOW__CORE__DAG_CONCURRENCY: 4
+    # AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 1
 
-    _PIP_ADDITIONAL_REQUIREMENTS: "minio requests"
+    # _PIP_ADDITIONAL_REQUIREMENTS: "minio requests"
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -341,8 +341,9 @@ services:
     image: minio/minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
+      MINIO_ENDPOINT: "http://minio:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
     ports:
       - "9000:9000"
       - "9001:9001"
