@@ -32,6 +32,7 @@ GITHUB_FILES = [
 
 def getUpload():
     bucket_name = 'ecommerce-data'
+    folder_name = 'raw_data'
 
     for url in GITHUB_FILES:
         file_name = url.split("/")[-1]
@@ -46,6 +47,7 @@ def getUpload():
         if not minio_client.bucket_exists(bucket_name):
             minio_client.make_bucket(bucket_name)
 
+        object_name = f"{folder_name}/{file_name}"
         minio_client.fput_object(bucket_name, file_name, local_path)
         print(f"Uploaded {file_name} to MinIO '{bucket_name}' bucket.")
 
