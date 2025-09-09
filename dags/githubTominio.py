@@ -57,7 +57,7 @@ with DAG(
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
     catchup=False,
-    tags=["ecommerce", "minio", "etl"],
+    tags=["githubtoMinio"],
 ) as dag:
     task1 = PythonOperator(
         task_id="upload_github_files",
