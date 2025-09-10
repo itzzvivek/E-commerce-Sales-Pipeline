@@ -5,6 +5,8 @@ import requests
 import os
 from minio import Minio
 
+from urllib.parse import unquote
+
 
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
@@ -35,7 +37,7 @@ def getUpload():
     folder_name = 'raw_data'
 
     for url in GITHUB_FILES:
-        file_name = url.split("/")[-1]
+        file_name = unquote(url.split("/")[-1])
         local_path = f"/tmp/{file_name}"
 
         r = requests.get(url)
