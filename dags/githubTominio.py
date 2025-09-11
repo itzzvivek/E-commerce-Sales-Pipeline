@@ -50,7 +50,7 @@ def getUpload():
             minio_client.make_bucket(bucket_name)
 
         object_name = f"{folder_name}/{file_name}"
-        minio_client.fput_object(bucket_name, file_name, local_path)
+        minio_client.fput_object(bucket_name, object_name, local_path)
         print(f"Uploaded {file_name} to MinIO '{bucket_name}' bucket.")
 
 with DAG(
