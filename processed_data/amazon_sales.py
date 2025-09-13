@@ -8,7 +8,7 @@ def clean_amazon_sales(input_path: str, output_path: str):
     hadoop_conf = spark._jsc.hadoopConfiguration()
     hadoop_conf.set("fs.s3a.endpoint", "http://localhost:9000")
     hadoop_conf.set("fs.s3a.access.key", "minio")
-    hadoop_conf.set("fs.s3a.secret.key", "mini123")
+    hadoop_conf.set("fs.s3a.secret.key", "minio123")
     hadoop_conf.set("fs.s3a.path.style.access", "true")
 
     # Read raw CSV from MinIO
