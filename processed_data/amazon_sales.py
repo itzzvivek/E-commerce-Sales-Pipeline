@@ -2,28 +2,33 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when, lit, initcap
 
 def clean_amazon_sales(input_path: str, output_path: str):
-    spark = SparkSession.builder.appName("AmazonSalesCleaning").getOrCreate()
+    spark = (
+    SparkSession.builder
+    .appName("AmazonSalesCleaning")
+    .config("spark.jars", "/home/itzzvivek/spark_jars/hadoop-aws-3.3.2.jar,/home/itzzvivek/spark_jars/aws-java-sdk-bundle-1.11.1026.jar")
+    .config("spark.hadoop.fs.s3a.access.key", "minioadmin")
+    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin")
+    .config("spark.hadoop.fs.s3a.endpoint", "http://localhost:9000")
+    .config("spark.hadoop.fs.s3a.path.style.access", "true")
+    .config("spark.network.timeout", "60000")
+    .config("spark.executor.heartbeatInterval", "10000")
+    .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
+    .config("spark.hadoop.fs.s3a.connection.establish.timeout", "5000")
+    .config("spark.hadoop.fs.s3a.attempts.maximum", "3")
+    .getOrCreate()
+)
+    log4jLogger = spark._jvm.org.apache.log4j
+    logger = log4jLogger.LogManager.getLogger(__name__)
 
-    # Configure MinIO (S3A)
-    hadoop_conf = spark._jsc.hadoopConfiguration()
-    hadoop_conf.set("fs.s3a.endpoint", "http://localhost:9000")
-    hadoop_conf.set("fs.s3a.access.key", "minio")
-    hadoop_conf.set("fs.s3a.secret.key", "minio123")
-    hadoop_conf.set("fs.s3a.path.style.access", "true")
-
-    # Read raw CSV from MinIO
     df = spark.read.csv(input_path, header=True, inferSchema=True)
 
-    # Drop unnecessary columns
     cols_to_drop = ["index", "Unnamed: 22"]
     df = df.drop(*[c for c in cols_to_drop if c in df.columns])
 
-    # Cast columns to correct types
     df = df.withColumn("Date", col("Date").cast("date")) \
            .withColumn("ship-postal-code", col("ship-postal-code").cast("string")) \
            .withColumn("Amount", col("Amount").cast("double"))
 
-    # Fill missing values
     df = df.fillna({
         "Courier Status": "Unknown",
         "fulfilled-by": "Unknown",
@@ -35,7 +40,6 @@ def clean_amazon_sales(input_path: str, output_path: str):
         "Amount": 0.0
     })
 
-    # Standardize Status column
     df = df.withColumn(
         "Status",
         when(col("Status") == "Shipped - Delivered to Buyer", lit("Delivered"))
@@ -44,11 +48,9 @@ def clean_amazon_sales(input_path: str, output_path: str):
         .otherwise(col("Status"))
     )
 
-    # Format city/state names
     df = df.withColumn("ship-city", initcap(col("ship-city"))) \
            .withColumn("ship-state", initcap(col("ship-state")))
 
-    # Write cleaned data back to MinIO
     df.write.mode("overwrite").option("header", True).parquet(output_path)
 
     print(f"✅ Amazon Sales Report cleaned and saved to {output_path}")
