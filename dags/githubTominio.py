@@ -39,19 +39,27 @@ def getUpload():
     for url in GITHUB_FILES:
         file_name = unquote(url.split("/")[-1])
         local_path = f"/tmp/{file_name}"
+        
+        try:
+            r = requests.get(url)
+            r.raise_for_status()
 
-        r = requests.get(url)
-        r.raise_for_status()
+            with open(local_path, "wb") as f:
+                f.write(r.content)
+            
+            file_size = os.path.getsize(local_path)
+            if file_size == 0:
+                print(f"Skipping {file_name}: File written is empty.")
 
-        with open(local_path, "wb") as f:
-            f.write(r.content)
+            if not minio_client.bucket_exists(bucket_name):
+                minio_client.make_bucket(bucket_name)
 
-        if not minio_client.bucket_exists(bucket_name):
-            minio_client.make_bucket(bucket_name)
-
-        object_name = f"{folder_name}/{file_name}"
-        minio_client.fput_object(bucket_name, object_name, local_path)
-        print(f"Uploaded {file_name} to MinIO '{bucket_name}' bucket.")
+            object_name = f"{folder_name}/{file_name}"
+            minio_client.fput_object(bucket_name, object_name, local_path)
+            print(f"Uploaded {file_name} to MinIO '{bucket_name}' bucket.")
+            
+        except Exception as e:
+            print(f"Failed to process {file_name}: {e}")
 
 with DAG(
     dag_id="github_to_minio_pipeline",
