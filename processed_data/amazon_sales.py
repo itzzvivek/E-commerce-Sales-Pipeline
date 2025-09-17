@@ -3,20 +3,20 @@ from pyspark.sql.functions import col, when, lit, initcap
 
 def clean_amazon_sales(input_path: str, output_path: str):
     spark = (
-    SparkSession.builder
-    .appName("AmazonSalesCleaning")
-    .config("spark.jars", "/home/itzzvivek/spark_jars/hadoop-aws-3.3.2.jar,/home/itzzvivek/spark_jars/aws-java-sdk-bundle-1.11.1026.jar")
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin")
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin")
-    .config("spark.hadoop.fs.s3a.endpoint", "http://localhost:9000")
-    .config("spark.hadoop.fs.s3a.path.style.access", "true")
-    .config("spark.network.timeout", "60000")
-    .config("spark.executor.heartbeatInterval", "10000")
-    .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
-    .config("spark.hadoop.fs.s3a.connection.establish.timeout", "5000")
-    .config("spark.hadoop.fs.s3a.attempts.maximum", "3")
-    .getOrCreate()
-)
+        SparkSession.builder
+        .appName("AmazonSalesCleaning")
+        .config("spark.jars", "/home/itzzvivek/spark_jars/hadoop-aws-3.3.2.jar,/home/itzzvivek/spark_jars/aws-java-sdk-bundle-1.11.1026.jar")
+        .config("spark.hadoop.fs.s3a.access.key", "minioadmin")
+        .config("spark.hadoop.fs.s3a.secret.key", "minioadmin")
+        .config("spark.hadoop.fs.s3a.endpoint", "http://localhost:9000")
+        .config("spark.hadoop.fs.s3a.path.style.access", "true")
+        .config("spark.network.timeout", "60000")
+        .config("spark.executor.heartbeatInterval", "10000")
+        .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
+        .config("spark.hadoop.fs.s3a.connection.establish.timeout", "5000")
+        .config("spark.hadoop.fs.s3a.attempts.maximum", "3")
+        .getOrCreate()
+    )
     log4jLogger = spark._jvm.org.apache.log4j
     logger = log4jLogger.LogManager.getLogger(__name__)
 
