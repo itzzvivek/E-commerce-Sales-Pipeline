@@ -1,3 +1,7 @@
+apache-airflow
+boto3
+pyspark
+duckdb
 minio
 pandas
 requests

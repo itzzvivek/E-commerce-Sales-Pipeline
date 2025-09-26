@@ -31,27 +31,27 @@ def get_spark(app_name="DataCleaning"):
         .getOrCreate()
     )
 
-    hconf = spark._jsc.hadoopConfiguration()
-    hconf.set("fs.s3a.access.key", access_key)
-    hconf.set("fs.s3a.secret.key", secret_key)
-    hconf.set("fs.s3a.endpoint", endpoint)
-    hconf.set("fs.s3a.path.style.access", "true")
-    hconf.set("fs.s3a.connection.timeout", timeout_ms)
-    hconf.set("fs.s3a.connection.establish.timeout", timeout_ms)
-    hconf.set("fs.s3a.socket.timeout", timeout_ms)
-    hconf.set("fs.s3a.attempts.maximum", "10")
-    hconf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-    hconf.set("fs.s3a.aws.credentials.provider",
-              "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+    # hconf = spark._jsc.hadoopConfiguration()
+    # hconf.set("fs.s3a.access.key", access_key)
+    # hconf.set("fs.s3a.secret.key", secret_key)
+    # hconf.set("fs.s3a.endpoint", endpoint)
+    # hconf.set("fs.s3a.path.style.access", "true")
+    # hconf.set("fs.s3a.connection.timeout", timeout_ms)
+    # hconf.set("fs.s3a.connection.establish.timeout", timeout_ms)
+    # hconf.set("fs.s3a.socket.timeout", timeout_ms)
+    # hconf.set("fs.s3a.attempts.maximum", "10")
+    # hconf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    # hconf.set("fs.s3a.aws.credentials.provider",
+    #           "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
 
-    print("✅ Spark session created with S3/MinIO configuration.")
-    print("\n--- ACTIVE S3A CONFIGS ---")
-    for k in [
-        "fs.s3a.access.key", "fs.s3a.secret.key", "fs.s3a.endpoint",
-        "fs.s3a.connection.timeout", "fs.s3a.connection.establish.timeout",
-        "fs.s3a.socket.timeout", "fs.s3a.attempts.maximum",
-        "fs.s3a.aws.credentials.provider"
-    ]:
-        print(f"{k} = {hconf.get(k)}")
+    # print("✅ Spark session created with S3/MinIO configuration.")
+    # print("\n--- ACTIVE S3A CONFIGS ---")
+    # for k in [
+    #     "fs.s3a.access.key", "fs.s3a.secret.key", "fs.s3a.endpoint",
+    #     "fs.s3a.connection.timeout", "fs.s3a.connection.establish.timeout",
+    #     "fs.s3a.socket.timeout", "fs.s3a.attempts.maximum",
+    #     "fs.s3a.aws.credentials.provider"
+    # ]:
+    #     print(f"{k} = {hconf.get(k)}")
 
     return spark
