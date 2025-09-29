@@ -1,11 +1,13 @@
 import logging
 import os
 import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from pyspark.sql.functions import col, when, lit, initcap
 from utils.spark import get_spark
 
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 logging.basicConfig(level=logging.INFO)
