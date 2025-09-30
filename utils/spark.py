@@ -4,9 +4,14 @@ import os
 def get_spark(app_name="DataCleaning"):
     jars = os.getenv(
         "SPARK_JARS",
-        "/home/itzzvivek/spark_jars/hadoop-aws-3.3.5.jar,"
-        "/home/itzzvivek/spark_jars/aws-java-sdk-bundle-1.12.367.jar"
+        ",".join([
+            "/home/itzzvivek/spark_jars/hadoop-aws-3.3.6.jar",
+            "/home/itzzvivek/spark_jars/hadoop-auth-3.3.6.jar",
+            "/home/itzzvivek/spark_jars/hadoop-common-3.3.6.jar",
+            "/home/itzzvivek/spark_jars/aws-java-sdk-bundle-1.12.367.jar"
+        ])
     )
+
     access_key = os.getenv("MINIO_ACCESS_KEY", "minio")
     secret_key = os.getenv("MINIO_SECRET_KEY", "minio123")
     endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
