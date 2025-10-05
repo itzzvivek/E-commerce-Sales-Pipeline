@@ -1,10 +1,7 @@
 from pyspark.sql import SparkSession
 import os
 
-def get_spark(app_name="DataCleaning"):
-    """
-    Create a SparkSession configured to read/write from S3/MinIO.
-    """
+def get_spark(app_name="AmazonSalesCleaning"):
     jars = os.getenv(
         "SPARK_JARS",
         ",".join([
@@ -28,10 +25,18 @@ def get_spark(app_name="DataCleaning"):
         .config("spark.hadoop.fs.s3a.endpoint", endpoint)
         .config("spark.hadoop.fs.s3a.path.style.access", "true")
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        .config("spark.hadoop.fs.s3a.connection.timeout", 60000)
-        .config("spark.hadoop.fs.s3a.connection.establish.timeout", 60000)
-        .config("spark.hadoop.fs.s3a.socket.timeout", 60000)
+        .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
+        .config("spark.hadoop.fs.s3a.connection.establish.timeout", "60000")
+        .config("spark.hadoop.fs.s3a.socket.timeout", "60000")
+        .config("spark.hadoop.fs.s3a.attempts.maximum", "10")
+        .config("spark.hadoop.fs.s3a.connection.maximum", "100")
+        .config("spark.hadoop.fs.s3a.aws.credentials.provider",
+                "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
         .getOrCreate()
     )
+
+    print("this is vivek debug")    
+    print(spark._jsc.hadoopConfiguration().get("fs.s3a.connection.timeout"))
+
 
     return spark
