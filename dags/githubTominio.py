@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 import requests
 import os
@@ -7,13 +8,9 @@ from minio import Minio
 
 from urllib.parse import unquote
 
-
-
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "mini123")
-
-
 
 minio_client = Minio(
     MINIO_ENDPOINT.replace("http://", "").replace("https://", ""),
@@ -69,9 +66,20 @@ with DAG(
     catchup=False,
     tags=["githubtoMinio"],
 ) as dag:
+
     task1 = PythonOperator(
         task_id="upload_github_files",
         python_callable=getUpload
     )
 
-    task1
+    transform_amazon = BashOperator(
+        task_id="transform_amazon_sales",
+        bash_command=(
+            "spark-submit "
+            "--packages org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367 "
+            "/opt/airflow/processed_data/amazon_sales.py"
+        )
+    )   
+
+    upload_task >> transform_amazon
+

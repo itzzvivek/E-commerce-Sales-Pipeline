@@ -1,33 +1,54 @@
-import logging
 import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import logging
+from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when, lit, initcap
-from utils.spark import get_spark
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_spark(app_name="AmazonSalesCleaning"):
+    """
+    Create a SparkSession configured for MinIO (S3A connector)
+    """
+    spark = (
+        SparkSession.builder
+        .appName(app_name)
+        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT", "http://minio:9000"))
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY", "minio"))
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY", "mini123"))
+        .config("spark.hadoop.fs.s3a.path.style.access", "true")
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        .config("spark.jars.packages",
+                "org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367")
+        .getOrCreate()
+    )
+
+    logger.info("✅ Spark session created successfully.")
+    return spark
+
+
 def clean_amazon_sales(input_path: str, output_path: str):
+    """
+    Cleans and transforms the Amazon sales dataset.
+    """
     spark = get_spark("AmazonSalesCleaning")
+    logger.info(f"📥 Reading data from {input_path}")
 
-    logger.info(f"Reading data from {input_path}")
     df = spark.read.csv(input_path, header=True, inferSchema=True)
+    df.show(5)
+    logger.info(f"Data loaded with {df.count()} rows and {len(df.columns)} columns")
 
-    # Drop unnecessary columns
     cols_to_drop = ["index", "Unnamed: 22"]
     df = df.drop(*[c for c in cols_to_drop if c in df.columns])
 
-    # Correct data types
+
     df = (
         df.withColumn("Date", col("Date").cast("date"))
           .withColumn("ship-postal-code", col("ship-postal-code").cast("string"))
           .withColumn("Amount", col("Amount").cast("double"))
     )
 
-    # Fill missing values
+
     df = df.fillna({
         "Courier Status": "Unknown",
         "fulfilled-by": "Unknown",
@@ -39,7 +60,7 @@ def clean_amazon_sales(input_path: str, output_path: str):
         "Amount": 0.0
     })
 
-    # Standardize Status
+
     df = df.withColumn(
         "Status",
         when(col("Status") == "Shipped - Delivered to Buyer", lit("Delivered"))
@@ -48,17 +69,22 @@ def clean_amazon_sales(input_path: str, output_path: str):
         .otherwise(col("Status"))
     )
 
-    # Capitalize city/state names
+
     df = (
         df.withColumn("ship-city", initcap(col("ship-city")))
           .withColumn("ship-state", initcap(col("ship-state")))
     )
 
-    logger.info(f"Writing cleaned data to {output_path}")
-    df.write.mode("overwrite").option("header", True).parquet(output_path)
+    logger.info(f"📤 Writing cleaned data to {output_path}")
+    (
+        df.write.mode("overwrite")
+        .option("header", True)
+        .parquet(output_path)
+    )
 
-    logger.info(f"✅ Amazon Sales Report cleaned and saved to {output_path}")
+    logger.info(f"✅ Amazon Sales Report cleaned & saved successfully at {output_path}")
     spark.stop()
+
 
 
 if __name__ == "__main__":
