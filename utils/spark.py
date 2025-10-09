@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 import os
 
-def get_spark(app_name="AmazonSalesCleaning"):
+def get_spark(app_name="DataCleaning"):
     jars = os.getenv(
         "SPARK_JARS",
         ",".join([
@@ -29,14 +29,11 @@ def get_spark(app_name="AmazonSalesCleaning"):
         .config("spark.hadoop.fs.s3a.connection.establish.timeout", "60000")
         .config("spark.hadoop.fs.s3a.socket.timeout", "60000")
         .config("spark.hadoop.fs.s3a.attempts.maximum", "10")
-        .config("spark.hadoop.fs.s3a.connection.maximum", "100")
-        .config("spark.hadoop.fs.s3a.aws.credentials.provider",
-                "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+        .config(
+            "spark.hadoop.fs.s3a.aws.credentials.provider",
+            "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
+        )
         .getOrCreate()
     )
-
-    print("this is vivek debug")    
-    print(spark._jsc.hadoopConfiguration().get("fs.s3a.connection.timeout"))
-
 
     return spark
