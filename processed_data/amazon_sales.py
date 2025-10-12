@@ -11,17 +11,23 @@ def get_spark(app_name="AmazonSalesCleaning"):
     Create a SparkSession configured for MinIO (S3A connector)
     """
     spark = (
-        SparkSession.builder
-        .appName(app_name)
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT", "http://minio:9000"))
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY", "minio"))
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY", "mini123"))
-        .config("spark.hadoop.fs.s3a.path.style.access", "true")
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        .config("spark.jars.packages",
-                "org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367")
-        .getOrCreate()
+    SparkSession.builder
+    .appName(app_name)
+    .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT", "http://minio:9000"))
+    .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY", "minio"))
+    .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY", "mini123"))
+    .config("spark.hadoop.fs.s3a.path.style.access", "true")
+    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+    .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
+    .config("spark.hadoop.fs.s3a.connection.establish.timeout", "5000")
+    .config("spark.hadoop.fs.s3a.connection.maximum", "100")
+    .config("spark.hadoop.fs.s3a.attempts.maximum", "3")
+    .config(
+        "spark.jars.packages",
+        "org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367"
     )
+    .getOrCreate()
+)
 
     logger.info("✅ Spark session created successfully.")
     return spark
