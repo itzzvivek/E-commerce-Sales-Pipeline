@@ -67,7 +67,7 @@ with DAG(
     tags=["githubtoMinio"],
 ) as dag:
 
-    task1 = PythonOperator(
+    upload_task = PythonOperator(
         task_id="upload_github_files",
         python_callable=getUpload
     )
