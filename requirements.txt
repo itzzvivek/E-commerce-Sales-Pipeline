@@ -5,3 +5,4 @@ duckdb
 minio
 pandas
 requests
+pyarrow

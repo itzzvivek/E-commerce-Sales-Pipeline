@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import requests
 import os
 from minio import Minio
+from processed_data.amazon_sales import clean_amazon_sales
 
 from urllib.parse import unquote
 
@@ -74,11 +75,7 @@ with DAG(
 
     transform_amazon = BashOperator(
         task_id="transform_amazon_sales",
-        bash_command=(
-            "spark-submit "
-            "--packages org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367 "
-            "/opt/airflow/processed_data/amazon_sales.py"
-        )
+        python_callable=clean_am
     )   
 
     upload_task >> transform_amazon

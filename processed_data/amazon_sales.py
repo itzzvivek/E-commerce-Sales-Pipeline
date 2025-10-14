@@ -1,64 +1,34 @@
-import os
-import logging
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, lit, initcap
+from minio import Minio
+import pandas as pd
+from io import BytesIO
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def get_spark(app_name="AmazonSalesCleaning"):
-    """
-    Create a SparkSession configured for MinIO (S3A connector)
-    """
-    spark = (
-        SparkSession.builder
-        .appName(app_name)
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT", "http://localhost:9000"))
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY", "minio"))
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY", "mini123"))
-        .config("spark.hadoop.fs.s3a.path.style.access", "true")
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        .config("spark.hadoop.fs.s3a.connection.timeout", "60000")
-        .config("spark.hadoop.fs.s3a.connection.establish.timeout", "5000")
-        .config("spark.network.timeout", "60000")
-        .config("spark.hadoop.fs.s3a.connection.maximum", "100")
-        .config("spark.hadoop.fs.s3a.attempts.maximum", "3")
-        .config("spark.hadoop.fs.s3a.retry.limit", "3")
-        .config(
-            "spark.jars.packages",
-            "org.apache.hadoop:hadoop-aws:3.3.6,com.amazonaws:aws-java-sdk-bundle:1.12.367"
-        )
-        .getOrCreate()
+def clean_amazon_sales():
+    # --- MinIO Config ---
+    client = Minio(
+        "localhost:9000",
+        access_key="minioadmin",
+        secret_key="minioadmin",
+        secure=False
     )
 
-    logger.info("✅ Spark session created successfully.")
+    bucket_name = "ecommerce-data"
+    raw_file = "raw_data/Amazon Sale Report.csv"
+    processed_file = "processed_data/amazon_sales_cleaned.parquet"
 
-    print(spark.sparkContext._jsc.hadoopConfiguration().get("fs.s3a.connection.timeout"))
+    # --- Step 1: Read CSV from MinIO ---
+    data = client.get_object(bucket_name, raw_file)
+    df = pd.read_csv(BytesIO(data.read()))
+    data.close()
+    data.release_conn()
 
-    return spark
+    print("📥 Data loaded from MinIO. Starting transformations...")
 
-
-def clean_amazon_sales(input_path: str, output_path: str):
-    """
-    Cleans and transforms the Amazon sales dataset.
-    """
-    spark = get_spark("AmazonSalesCleaning")
-    logger.info(f"📥 Reading data from {input_path}")
-
-    df = spark.read.csv(input_path, header=True, inferSchema=True)
-    df.show(5)
-    logger.info(f"Data loaded with {df.count()} rows and {len(df.columns)} columns")
-
+    # --- Step 2: Clean & Transform ---
     cols_to_drop = ["index", "Unnamed: 22"]
-    df = df.drop(*[c for c in cols_to_drop if c in df.columns])
+    df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
-
-    df = (
-        df.withColumn("Date", col("Date").cast("date"))
-          .withColumn("ship-postal-code", col("ship-postal-code").cast("string"))
-          .withColumn("Amount", col("Amount").cast("double"))
-    )
-
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce").fillna(0.0)
 
     df = df.fillna({
         "Courier Status": "Unknown",
@@ -67,40 +37,38 @@ def clean_amazon_sales(input_path: str, output_path: str):
         "ship-state": "Unknown",
         "ship-country": "Unknown",
         "promotion-ids": "Unknown",
-        "currency": "INR",
-        "Amount": 0.0
+        "currency": "INR"
     })
 
-
-    df = df.withColumn(
-        "Status",
-        when(col("Status") == "Shipped - Delivered to Buyer", lit("Delivered"))
-        .when(col("Status") == "Shipped", lit("Shipped"))
-        .when(col("Status") == "Cancelled", lit("Cancelled"))
-        .otherwise(col("Status"))
+    df["Status"] = (
+        df["Status"]
+        .replace({
+            "Shipped - Delivered to Buyer": "Delivered",
+            "Shipped": "Shipped",
+            "Cancelled": "Cancelled"
+        })
     )
 
+    df["ship-city"] = df["ship-city"].str.title()
+    df["ship-state"] = df["ship-state"].str.title()
 
-    df = (
-        df.withColumn("ship-city", initcap(col("ship-city")))
-          .withColumn("ship-state", initcap(col("ship-state")))
+    print("✨ Data cleaning completed.")
+
+    # --- Step 3: Write cleaned Parquet to MinIO ---
+    buffer = BytesIO()
+    df.to_parquet(buffer, index=False, engine="pyarrow")
+    buffer.seek(0)
+
+    client.put_object(
+        bucket_name,
+        processed_file,
+        data=buffer,
+        length=buffer.getbuffer().nbytes,
+        content_type="application/octet-stream"
     )
 
-    logger.info(f"📤 Writing cleaned data to {output_path}")
-    (
-        df.write.mode("overwrite")
-        .option("header", True)
-        .parquet(output_path)
-    )
-
-    logger.info(f"✅ Amazon Sales Report cleaned & saved successfully at {output_path}")
-    spark.stop()
-
+    print(f"✅ Cleaned data saved as Parquet: s3://{bucket_name}/{processed_file}")
 
 
 if __name__ == "__main__":
-    bucket_name = os.getenv("MINIO_BUCKET", "ecommerce-data")
-    input_file = f"s3a://{bucket_name}/raw_data/Amazon Sale Report.csv"
-    output_file = f"s3a://{bucket_name}/processed_data/amazon_sales_cleaned"
-
-    clean_amazon_sales(input_file, output_file)
+    clean_amazon_sales()
