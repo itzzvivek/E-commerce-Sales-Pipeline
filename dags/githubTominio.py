@@ -20,6 +20,10 @@ minio_client = Minio(
     secure=False
 )
 
+BUCKET_NAME = "ecommerce-data"
+RAW_FOLDER = "raw_data"
+PROCESSED_FOLDER = "processed_data"
+
 GITHUB_FILES = [
     "https://raw.githubusercontent.com/itzzvivek/E-commerce-Sales-Pipeline/refs/heads/main/data/Amazon%20Sale%20Report.csv",
     "https://raw.githubusercontent.com/itzzvivek/E-commerce-Sales-Pipeline/refs/heads/main/data/Cloud%20Warehouse%20Compersion%20Chart.csv",
@@ -59,6 +63,14 @@ def getUpload():
         except Exception as e:
             print(f"Failed to process {file_name}: {e}")
 
+def transform_amazon_sales():
+    input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLCER}/Amazon Sale Report.csv"
+    output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLCER}/amazon_sales.parquet"
+
+    print("Starting transformation for amazon sale report")
+    clean_amazon_sales(input_path, output_path)
+    print("Transformation complete and uploaded to Minio")
+
 with DAG(
     dag_id="github_to_minio_pipeline",
     description="A DAG to upload files from GitHub to MinIO",
@@ -75,8 +87,7 @@ with DAG(
 
     transform_amazon = BashOperator(
         task_id="transform_amazon_sales",
-        python_callable=clean_am
+        python_callable=clean_amazon_sales
     )   
 
     upload_task >> transform_amazon
-
