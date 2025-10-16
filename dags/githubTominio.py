@@ -5,9 +5,13 @@ from datetime import datetime, timedelta
 import requests
 import os
 from minio import Minio
-from processed_data.amazon_sales import clean_amazon_sales
 
 from urllib.parse import unquote
+
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from processed_data.amazon_sales import clean_amazon_sales
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -64,8 +68,8 @@ def getUpload():
             print(f"Failed to process {file_name}: {e}")
 
 def transform_amazon_sales():
-    input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLCER}/Amazon Sale Report.csv"
-    output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLCER}/amazon_sales.parquet"
+    input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLDER}/Amazon Sale Report.csv"
+    output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLDER}/amazon_sales.parquet"
 
     print("Starting transformation for amazon sale report")
     clean_amazon_sales(input_path, output_path)
