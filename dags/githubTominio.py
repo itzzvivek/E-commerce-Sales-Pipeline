@@ -8,8 +8,8 @@ from minio import Minio
 
 from urllib.parse import unquote
 
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# import sys, os
+# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from processed_data.amazon_sales import clean_amazon_sales
 
