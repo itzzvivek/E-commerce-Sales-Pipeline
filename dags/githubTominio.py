@@ -1,17 +1,12 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
 import os
 from minio import Minio
-
 from urllib.parse import unquote
-
-# import sys, os
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 from processed_data.amazon_sales import clean_amazon_sales
+
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -38,60 +33,58 @@ GITHUB_FILES = [
     "https://raw.githubusercontent.com/itzzvivek/E-commerce-Sales-Pipeline/refs/heads/main/data/Sale%20Report.csv",
 ]
 
-def getUpload():
-    bucket_name = 'ecommerce-data'
-    folder_name = 'raw_data'
+def upload_github_files():
+    if not minio_client.bucket_exists(BUCKET_NAME):
+        minio_client.make_bucket(BUCKET_NAME)
+        print(f"Created bucket '{BUCKET_NAME}'")
 
     for url in GITHUB_FILES:
         file_name = unquote(url.split("/")[-1])
         local_path = f"/tmp/{file_name}"
-        
+
         try:
             r = requests.get(url)
             r.raise_for_status()
 
             with open(local_path, "wb") as f:
                 f.write(r.content)
-            
-            file_size = os.path.getsize(local_path)
-            if file_size == 0:
-                print(f"Skipping {file_name}: File written is empty.")
 
-            if not minio_client.bucket_exists(bucket_name):
-                minio_client.make_bucket(bucket_name)
+            if os.path.getsize(local_path) == 0:
+                print(f"⚠️ Skipping empty file: {file_name}")
+                continue
 
-            object_name = f"{folder_name}/{file_name}"
-            minio_client.fput_object(bucket_name, object_name, local_path)
-            print(f"Uploaded {file_name} to MinIO '{bucket_name}' bucket.")
-            
+            object_name = f"{RAW_FOLDER}/{file_name}"
+            minio_client.fput_object(BUCKET_NAME, object_name, local_path)
+            print(f"✅ Uploaded {file_name} → MinIO/{RAW_FOLDER}/")
+
         except Exception as e:
-            print(f"Failed to process {file_name}: {e}")
+            print(f"❌ Failed to process {file_name}: {e}")
 
 def transform_amazon_sales():
     input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLDER}/Amazon Sale Report.csv"
     output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLDER}/amazon_sales.parquet"
 
-    print("Starting transformation for amazon sale report")
+    print("🚀 Starting transformation for Amazon Sale Report")
     clean_amazon_sales(input_path, output_path)
-    print("Transformation complete and uploaded to Minio")
+    print("✅ Transformation complete and uploaded to MinIO")
 
 with DAG(
     dag_id="github_to_minio_pipeline",
-    description="A DAG to upload files from GitHub to MinIO",
+    description="Pipeline: Pull GitHub CSV → MinIO → Transform → Parquet",
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
     catchup=False,
-    tags=["githubtoMinio"],
+    tags=["github", "minio", "data_pipeline"],
 ) as dag:
 
     upload_task = PythonOperator(
         task_id="upload_github_files",
-        python_callable=getUpload
+        python_callable=upload_github_files,
     )
 
-    transform_amazon = BashOperator(
+    transform_task = PythonOperator(
         task_id="transform_amazon_sales",
-        python_callable=clean_amazon_sales
-    )   
+        python_callable=transform_amazon_sales,
+    )
 
-    upload_task >> transform_amazon
+    upload_task >> transform_task
