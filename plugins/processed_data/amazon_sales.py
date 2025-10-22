@@ -5,7 +5,7 @@ from io import BytesIO
 def clean_amazon_sales(input_path, output_path, **kwargs):
     # --- MinIO Config ---
     client = Minio(
-        "localhost:9000",
+        "minio:9000",
         access_key="minio",
         secret_key="minio123",
         secure=False
