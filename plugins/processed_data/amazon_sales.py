@@ -3,7 +3,6 @@ import pandas as pd
 from io import BytesIO
 
 def clean_amazon_sales(input_path, output_path, **kwargs):
-    # --- MinIO Config ---
     client = Minio(
         "minio:9000",
         access_key="minio",
@@ -15,7 +14,6 @@ def clean_amazon_sales(input_path, output_path, **kwargs):
     raw_file = "raw_data/Amazon Sale Report.csv"
     processed_file = "processed_data/amazon_sales_cleaned.parquet"
 
-    # --- Step 1: Read CSV from MinIO ---
     data = client.get_object(bucket_name, raw_file)
     df = pd.read_csv(BytesIO(data.read()))
     data.close()
@@ -23,7 +21,7 @@ def clean_amazon_sales(input_path, output_path, **kwargs):
 
     print("📥 Data loaded from MinIO. Starting transformations...")
 
-    # --- Step 2: Clean & Transform ---
+    
     cols_to_drop = ["index", "Unnamed: 22"]
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
@@ -52,9 +50,9 @@ def clean_amazon_sales(input_path, output_path, **kwargs):
     df["ship-city"] = df["ship-city"].str.title()
     df["ship-state"] = df["ship-state"].str.title()
 
-    print("✨ Data cleaning completed.")
+    print("Data cleaning completed.")
 
-    # --- Step 3: Write cleaned Parquet to MinIO ---
+
     buffer = BytesIO()
     df.to_parquet(buffer, index=False, engine="pyarrow")
     buffer.seek(0)
