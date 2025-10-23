@@ -5,7 +5,9 @@ import requests
 import os
 from minio import Minio
 from urllib.parse import unquote
+
 from processed_data.amazon_sales import clean_amazon_sales
+from processed_data.cloud_warehouse import clean_cloud_warehouse
 
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
@@ -59,14 +61,20 @@ def upload_github_files():
 
         except Exception as e:
             print(f"❌ Failed to process {file_name}: {e}")
+            
 
-def transform_amazon_sales():
-    input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLDER}/Amazon Sale Report.csv"
-    output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLDER}/amazon_sales.parquet"
+def run_transformation(clean_func, input_file, output_file):
+    """
+    Runs a data transformation function dynamically.
+    Each transformation script handles its own read/write logic.
+    """
+    input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLDER}/{input_file}"
+    output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLDER}/{output_file}"
 
-    print("🚀 Starting transformation for Amazon Sale Report")
-    clean_amazon_sales(input_path, output_path)
-    print("✅ Transformation complete and uploaded to MinIO")
+    print(f"🚀 Running transformation: {clean_func.__name__}")
+    clean_func(input_path, output_path)
+    print(f"✅ Transformation {clean_func.__name__} completed successfully.")
+
 
 with DAG(
     dag_id="github_to_minio_pipeline",
@@ -82,9 +90,16 @@ with DAG(
         python_callable=upload_github_files,
     )
 
-    transform_task = PythonOperator(
+    amazon_sales_task = PythonOperator(
         task_id="transform_amazon_sales",
-        python_callable=transform_amazon_sales,
+        python_callable=run_transformation,
+        op_args=[clean_amazon_sales, "Amazon Sale Report.csv", "amazon_sales.parquet"],
     )
 
-    upload_task >> transform_task
+    cloud_warehouse_task = PythonOperator(
+        task_id="transform_cloud_warehouse",
+        python_callable=run_transformation,
+        op_args=[clean_cloud_warehouse, "Cloud Warehouse Compersion Chart.csv", "cloud_warehouse.parquet"],
+    )
+
+    upload_task >> [amazon_sales_task, cloud_warehouse_task]
