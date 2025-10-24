@@ -4,7 +4,14 @@ import numpy as np
 from io import BytesIO
 import re
 
+
 def clean_cloud_warehouse(input_path=None, output_path=None, **kwargs):
+    """
+    Cleans and transforms the 'Cloud Warehouse Comparison Chart' dataset,
+    reads from MinIO, processes with pandas, and uploads cleaned parquet file back.
+    """
+
+    # ✅ Initialize MinIO client
     client = Minio(
         "minio:9000",
         access_key="minio",
@@ -13,50 +20,90 @@ def clean_cloud_warehouse(input_path=None, output_path=None, **kwargs):
     )
 
     bucket_name = "ecommerce-data"
-    raw_file = "raw_data/Cloud Warehouse Compersion Chart.csv"
-    processed_file = "processed_data/cloud_warehouse_cleaned.parquet"
 
-    data = client.get_object(bucket_name, raw_file)
+    # ✅ Normalize S3/MinIO paths
+    def normalize_path(path: str, default: str) -> str:
+        """Remove s3a:// or s3:// prefix if present."""
+        if not path:
+            return default
+        return re.sub(r"^s3a?://[^/]+/", "", path)
+
+    # Cleaned input/output paths
+    input_path = normalize_path(input_path, "raw_data/Cloud Warehouse Compersion Chart.csv")
+    output_path = normalize_path(output_path, "processed_data/cloud_warehouse_cleaned.parquet")
+
+    # ✅ Read CSV from MinIO
+    data = client.get_object(bucket_name, input_path)
     df = pd.read_csv(BytesIO(data.read()))
     data.close()
     data.release_conn()
 
-    df.dropna(how='all', inplace=True)
+    # ✅ Drop completely empty rows
+    df.dropna(how="all", inplace=True)
+
+    # ✅ Rename columns safely
     df.columns = ['index', 'shiprocket', 'shiprocket_price', 'increff_price']
     df = df[df['shiprocket'] != 'Heads']
     df.reset_index(drop=True, inplace=True)
 
+    # ✅ Price cleaner function
     def clean_price(value):
+        """Extracts numeric value from price strings like '₹1,234.50'."""
         if isinstance(value, str):
-            match = re.search(r"[\d.]+", value.replace(',', ''))
-            return float(match.group()) if match else np.nan
-        return value
+            value = value.strip().replace(',', '')
+            match = re.search(r"\d+(\.\d+)?", value)
+            if match:
+                try:
+                    return float(match.group())
+                except ValueError:
+                    return np.nan
+        if pd.isna(value):
+            return np.nan
+        try:
+            return float(value)
+        except Exception:
+            return np.nan
 
+    # ✅ Clean price columns
     df['shiprocket_price_clean'] = df['shiprocket_price'].apply(clean_price)
     df['increff_price_clean'] = df['increff_price'].apply(clean_price)
+
+    # ✅ Keep only valid rows
     df = df[(df['shiprocket_price_clean'].notna()) | (df['increff_price_clean'].notna())]
-    df['price_difference'] = (df['increff_price_clean'] - df['shiprocket_price_clean']).round(2)
-    df['increff_cheaper'] = np.where(df['price_difference'] < 0, True, False)
 
+    # ✅ Compute price difference safely
+    df['price_difference'] = (
+        df['increff_price_clean'].fillna(0) - df['shiprocket_price_clean'].fillna(0)
+    ).round(2)
+
+    # ✅ Flag if Increff is cheaper
+    df['increff_cheaper'] = df['price_difference'] < 0
+
+    # ✅ Normalization for numerical columns
     for col in ['shiprocket_price_clean', 'increff_price_clean']:
-        if df[col].notna().any():
+        valid = df[col].dropna()
+        if not valid.empty:
             df[f'{col}_normalized'] = (
-                (df[col] - df[col].min()) / (df[col].max() - df[col].min())
+                (df[col] - valid.min()) / (valid.max() - valid.min())
             ).round(3)
+        else:
+            df[f'{col}_normalized'] = np.nan
 
+    # ✅ Save cleaned data to Parquet in memory
     buffer = BytesIO()
     df.to_parquet(buffer, index=False, engine="pyarrow")
     buffer.seek(0)
 
+    # ✅ Upload cleaned parquet file back to MinIO
     client.put_object(
         bucket_name,
-        processed_file,
+        output_path,
         data=buffer,
         length=buffer.getbuffer().nbytes,
-        content_type="application/octet-stream"
+        content_type="application/octet-stream",
     )
 
-    print(f"✅ Cleaned Cloud Warehouse data uploaded to {bucket_name}/{processed_file}")
+    print(f"✅ Cleaned Cloud Warehouse data uploaded to {bucket_name}/{output_path}")
 
 
 if __name__ == "__main__":
