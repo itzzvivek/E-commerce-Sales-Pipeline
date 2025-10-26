@@ -8,6 +8,7 @@ from urllib.parse import unquote
 
 from processed_data.amazon_sales import clean_amazon_sales
 from processed_data.cloud_warehouse import clean_cloud_warehouse
+from processed_data.expense import clean_expense
 
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
@@ -64,16 +65,18 @@ def upload_github_files():
             
 
 def run_transformation(clean_func, input_file, output_file):
-    """
-    Runs a data transformation function dynamically.
-    Each transformation script handles its own read/write logic.
-    """
-    input_path = f"s3a://{BUCKET_NAME}/{RAW_FOLDER}/{input_file}"
-    output_path = f"s3a://{BUCKET_NAME}/{PROCESSED_FOLDER}/{output_file}"
+    input_path = f"{RAW_FOLDER}/{input_file}"
+    output_path = f"{PROCESSED_FOLDER}/{output_file}"
 
     print(f"🚀 Running transformation: {clean_func.__name__}")
-    clean_func(input_path, output_path)
+    clean_func(
+        client=minio_client,
+        bucket_name=BUCKET_NAME,
+        input_object=input_path,
+        output_object=output_path
+    )
     print(f"✅ Transformation {clean_func.__name__} completed successfully.")
+
 
 
 with DAG(
@@ -102,4 +105,10 @@ with DAG(
         op_args=[clean_cloud_warehouse, "Cloud Warehouse Compersion Chart.csv", "cloud_warehouse.parquet"],
     )
 
-    upload_task >> [amazon_sales_task, cloud_warehouse_task]
+    expense_task = PythonOperator(
+        task_id="transform_expense",
+        python_callable=run_transformation,
+        op_args=[clean_expense, "Expense IIGF.csv", "expense.parquet"],
+    )
+
+    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task]
