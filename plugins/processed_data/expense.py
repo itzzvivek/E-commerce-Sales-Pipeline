@@ -1,28 +1,16 @@
-from minio import Minio
-import pandas as pd
 from io import BytesIO
+import pandas as pd
 
-def clean_expense(input_path, output_path, **kwargs):
-    client = Minio(
-        "minio:9000",
-        access_key="minio",
-        secret_key = "minio123",
-        secure=False
-    )
-
-    bucket_name = "ecommerce-data"
-    raw_file = "raw_data/Expense IIGF.csv"
-    processed_file = "processed_data/expense_cleaned.parquet"
-
-    data = client.get_object(bucket_name, raw_file)
+def clean_expense(client, bucket_name, input_object, output_object, **kwargs):
+    data = client.get_object(bucket_name, input_object)
     df = pd.read_csv(BytesIO(data.read()))
     data.close()
     data.release_conn()
 
-    df.columns = ['index', 'received_date', 'received_amount', 'expense_name', 'expence_amount']
+    df.columns = ['index', 'received_date', 'received_amount', 'expense_name', 'expense_amount']
 
     received_df = df[['received_date', 'received_amount']].dropna().iloc[1:].copy()
-    expense_df = df[['expense_name', 'expence_amount']].dropna().iloc[1:].copy()
+    expense_df = df[['expense_name', 'expense_amount']].dropna().iloc[1:].copy()
 
     received_df['received_date'] = pd.to_datetime(received_df['received_date'], errors='coerce')
     received_df['received_amount'] = pd.to_numeric(received_df['received_amount'], errors='coerce')
@@ -32,9 +20,9 @@ def clean_expense(input_path, output_path, **kwargs):
     total_expense = expense_df['expense_amount'].sum()
     balance = total_received - total_expense
 
-    print(f"💰 Total Received: {total_received:.2f}")
-    print(f"💸 Total Expense: {total_expense:.2f}")
-    print(f"📈 Balance: {balance:.2f}")
+    print(f"Total Received: {total_received:.2f}")
+    print(f"Total Expense: {total_expense:.2f}")
+    print(f"Balance: {balance:.2f}")
 
     daily_summary = (
         received_df.groupby('received_date')['received_amount']
@@ -67,8 +55,9 @@ def clean_expense(input_path, output_path, **kwargs):
             length=buffer.getbuffer().nbytes,
             content_type="application/octet-stream"
         )
-    print(f"Expense data clened! ")
+
+    print("✅ Expense data cleaned and uploaded!")
 
 
 if __name__ == "__main__":
-    clean_expense()
+    print("This script is designed to be run via Airflow task, not standalone.")

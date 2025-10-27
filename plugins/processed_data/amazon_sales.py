@@ -1,27 +1,14 @@
-from minio import Minio
 import pandas as pd
 from io import BytesIO
 
-def clean_amazon_sales(input_path, output_path, **kwargs):
-    client = Minio(
-        "minio:9000",
-        access_key="minio",
-        secret_key="minio123",
-        secure=False
-    )
-
-    bucket_name = "ecommerce-data"
-    raw_file = "raw_data/Amazon Sale Report.csv"
-    processed_file = "processed_data/amazon_sales_cleaned.parquet"
-
-    data = client.get_object(bucket_name, raw_file)
+def clean_amazon_sales(client, bucket_name, input_object, output_object, **kwargs):
+    data = client.get_object(bucket_name, input_object)
     df = pd.read_csv(BytesIO(data.read()))
     data.close()
     data.release_conn()
 
-    print("📥 Data loaded from MinIO. Starting transformations...")
+    print("Data loaded from MinIO. Starting transformations...")
 
-    
     cols_to_drop = ["index", "Unnamed: 22"]
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
@@ -38,20 +25,16 @@ def clean_amazon_sales(input_path, output_path, **kwargs):
         "currency": "INR"
     })
 
-    df["Status"] = (
-        df["Status"]
-        .replace({
-            "Shipped - Delivered to Buyer": "Delivered",
-            "Shipped": "Shipped",
-            "Cancelled": "Cancelled"
-        })
-    )
+    df["Status"] = df["Status"].replace({
+        "Shipped - Delivered to Buyer": "Delivered",
+        "Shipped": "Shipped",
+        "Cancelled": "Cancelled"
+    })
 
     df["ship-city"] = df["ship-city"].str.title()
     df["ship-state"] = df["ship-state"].str.title()
 
-    print("Data cleaning completed.")
-
+    print("Data cleaning completed. Uploading processed file...")
 
     buffer = BytesIO()
     df.to_parquet(buffer, index=False, engine="pyarrow")
@@ -59,14 +42,14 @@ def clean_amazon_sales(input_path, output_path, **kwargs):
 
     client.put_object(
         bucket_name,
-        processed_file,
+        output_object,
         data=buffer,
         length=buffer.getbuffer().nbytes,
         content_type="application/octet-stream"
     )
 
-    print(f"✅ Cleaned data saved as Parquet: s3://{bucket_name}/{processed_file}")
+    print(f"Cleaned data saved to: s3://{bucket_name}/{output_object}")
 
 
 if __name__ == "__main__":
-    clean_amazon_sales()
+    print("This script is intended to be run via Airflow DAG.")

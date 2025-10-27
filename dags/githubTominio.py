@@ -64,7 +64,7 @@ def upload_github_files():
             print(f"✅ Uploaded: {file_name} → {RAW_FOLDER}/")
 
         except Exception as e:
-            print(f"❌ Failed to upload {file_name}: {e}")
+            print(f"Failed to upload {file_name}: {e}")
 
 
 def run_transformation(clean_func, input_file, output_file):
@@ -84,7 +84,7 @@ def run_transformation(clean_func, input_file, output_file):
 
 with DAG(
     dag_id="github_to_minio_pipeline",
-    description="ETL Pipeline: GitHub → MinIO → Transform → Parquet",
+    description="Ecommerce ETL Pipeline",
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
     catchup=False,

@@ -2,15 +2,18 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 ### Python ###
-data/minio
+data/minio/.minio.sys/
+data/minio/.minio.sys/**
 
+.minio/.minio.sys/
 airflow.cfg
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
+# C extensions 
 *.so
 
 # Distribution / packaging

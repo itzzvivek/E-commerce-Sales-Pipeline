@@ -84,7 +84,7 @@ def clean_cloud_warehouse(input_path=None, output_path=None, **kwargs):
         content_type="application/octet-stream",
     )
 
-    print(f"✅ Cleaned Cloud Warehouse data uploaded to {bucket_name}/{output_path}")
+    print(f"Cleaned Cloud Warehouse data uploaded to {bucket_name}/{output_path}")
 
 
 if __name__ == "__main__":
