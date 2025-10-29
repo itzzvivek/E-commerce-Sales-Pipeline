@@ -10,6 +10,7 @@ from minio import Minio
 from processed_data.amazon_sales import clean_amazon_sales
 from processed_data.cloud_warehouse import clean_cloud_warehouse
 from processed_data.expense import clean_expense
+from processed_data.international_sale_report import clean_international_sale
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -39,7 +40,6 @@ GITHUB_FILES = [
 
 
 def upload_github_files():
-    """Download CSV files from GitHub and upload to MinIO."""
     if not minio_client.bucket_exists(BUCKET_NAME):
         minio_client.make_bucket(BUCKET_NAME)
         print(f"✅ Created bucket: {BUCKET_NAME}")
@@ -114,5 +114,11 @@ with DAG(
         op_args=[clean_expense, "Expense IIGF.csv", "expense.parquet"],
     )
 
+    international_sales_task = PythonOperator(
+        task_id="transform_international_sale",
+        python_callable=run_transformation,
+        op_args=[clean_international_sale, "International sale Report.csv", "international_sales.parquet"],
+    )
 
-    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task]
+
+    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task]
