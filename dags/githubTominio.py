@@ -11,6 +11,8 @@ from processed_data.amazon_sales import clean_amazon_sales
 from processed_data.cloud_warehouse import clean_cloud_warehouse
 from processed_data.expense import clean_expense
 from processed_data.international_sale_report import clean_international_sale
+from processed_data.may_2022 import clean_may_2022
+
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -120,5 +122,10 @@ with DAG(
         op_args=[clean_international_sale, "International sale Report.csv", "international_sales.parquet"],
     )
 
+    may_2022_task = PythonOperator(
+        task_id="transform_may_2022",
+        python_callable=run_transformation,
+        op_args=[clean_may_2022, "May-2022.csv", "may_2022.parquet"]
+    )
 
-    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task]
+    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task]

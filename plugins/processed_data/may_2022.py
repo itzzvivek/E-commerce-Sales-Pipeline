@@ -1,23 +1,11 @@
-from minio import Minio
 import pandas as pd
 from io import BytesIO
 
-def clean_may_2022(input_path=None, output_path=None, **kwargs):
-    client = Minio(
-        kwargs.get("endpoint", "minio:9000"),
-        access_key=kwargs.get("access_key", "minio"),
-        secret_key=kwargs.get("secret_key", "minio123"),
-        secure=kwargs.get("secure", False)
-    )
-
-    bucket_name = kwargs.get("bucket_name", "ecommerce-data")
-    raw_file = input_path or "raw_data/May-2022.csv"
-    processed_file = output_path or "processed_data/may-2022_cleaned.parquet"
-
-    response = client.get_object(bucket_name, raw_file)
-    df = pd.read_csv(BytesIO(response.read()))
-    response.close()
-    response.release_conn()
+def clean_may_2022(client, bucket_name, input_object, output_object, **kwargs):
+    data = client.get_object(bucket_name, input_object)
+    df = pd.read_csv(BytesIO(data.read()))
+    data.close()
+    data.release_conn()
 
     df.columns = (
         df.columns.str.strip()
@@ -58,13 +46,13 @@ def clean_may_2022(input_path=None, output_path=None, **kwargs):
 
     client.put_object(
         bucket_name,
-        processed_file,
+        output_object,
         data=buffer,
         length=buffer.getbuffer().nbytes,
         content_type="application/octet-stream"
     )
 
-    print(f"Cleaned data saved to MinIO at: {processed_file}")
+    print(f"Cleaned data saved to MinIO at: {output_object}")
 
 
 if __name__ == "__main__":
