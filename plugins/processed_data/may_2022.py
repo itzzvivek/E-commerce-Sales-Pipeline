@@ -15,6 +15,7 @@ def clean_may_2022(client, bucket_name, input_object, output_object, **kwargs):
     )
 
     df = df.dropna(how="all")
+    
     if "order_id" in df.columns:
         df = df.dropna(subset=["order_id"])
     date_cols = [c for c in df.columns if "date" in c.lower()]

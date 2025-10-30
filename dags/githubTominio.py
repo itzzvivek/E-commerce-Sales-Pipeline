@@ -12,7 +12,7 @@ from processed_data.cloud_warehouse import clean_cloud_warehouse
 from processed_data.expense import clean_expense
 from processed_data.international_sale_report import clean_international_sale
 from processed_data.may_2022 import clean_may_2022
-
+from processed_data.pl_march2021 import clean_pl_march2021
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -44,7 +44,7 @@ GITHUB_FILES = [
 def upload_github_files():
     if not minio_client.bucket_exists(BUCKET_NAME):
         minio_client.make_bucket(BUCKET_NAME)
-        print(f"✅ Created bucket: {BUCKET_NAME}")
+        print(f"Created bucket: {BUCKET_NAME}")
 
     for url in GITHUB_FILES:
         file_name = unquote(url.split("/")[-1])
@@ -58,12 +58,12 @@ def upload_github_files():
                 f.write(response.content)
 
             if os.path.getsize(local_path) == 0:
-                print(f"⚠️ Skipping empty file: {file_name}")
+                print(f"Skipping empty file: {file_name}")
                 continue
 
             object_name = f"{RAW_FOLDER}/{file_name}"
             minio_client.fput_object(BUCKET_NAME, object_name, local_path)
-            print(f"✅ Uploaded: {file_name} → {RAW_FOLDER}/")
+            print(f"Uploaded: {file_name} → {RAW_FOLDER}/")
 
         except Exception as e:
             print(f"Failed to upload {file_name}: {e}")
@@ -74,14 +74,14 @@ def run_transformation(clean_func, input_file, output_file):
     input_path = f"{RAW_FOLDER}/{input_file}"
     output_path = f"{PROCESSED_FOLDER}/{output_file}"
 
-    print(f"🚀 Starting transformation: {clean_func.__name__}")
+    print(f"Starting transformation: {clean_func.__name__}")
     clean_func(
         client=minio_client,
         bucket_name=BUCKET_NAME,
         input_object=input_path,
         output_object=output_path
     )
-    print(f"✅ Transformation complete: {clean_func.__name__}")
+    print(f"Transformation complete: {clean_func.__name__}")
 
 
 with DAG(
@@ -128,4 +128,10 @@ with DAG(
         op_args=[clean_may_2022, "May-2022.csv", "may_2022.parquet"]
     )
 
-    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task]
+    pl_march_2021_task = PythonOperator(
+        task_id="transform_pl_march_2021.csv",
+        python_callable=run_transformation,
+        op_args=[clean_pl_march2021, "P L March 2021.csv", "pl_march_2021.parquet"]
+    )
+
+    upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task, pl_march_2021_task]
