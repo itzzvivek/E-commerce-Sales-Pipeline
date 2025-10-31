@@ -1,30 +1,11 @@
-from minio import Minio
 import pandas as pd
 import numpy as np
 from io import BytesIO
 import re
 
 
-def clean_cloud_warehouse(input_path=None, output_path=None, **kwargs):
-    client = Minio(
-        "minio:9000",
-        access_key="minio",
-        secret_key="minio123",
-        secure=False
-    )
-
-    bucket_name = "ecommerce-data"
-
-    def normalize_path(path: str, default: str) -> str:
-        """Remove s3a:// or s3:// prefix if present."""
-        if not path:
-            return default
-        return re.sub(r"^s3a?://[^/]+/", "", path)
-
-    input_path = normalize_path(input_path, "raw_data/Cloud Warehouse Compersion Chart.csv")
-    output_path = normalize_path(output_path, "processed_data/cloud_warehouse_cleaned.parquet")
-
-    data = client.get_object(bucket_name, input_path)
+def clean_cloud_warehouse(client, bucket_name, input_object, output_object, **kwargs):
+    data = client.get_object(bucket_name, input_object)
     df = pd.read_csv(BytesIO(data.read()))
     data.close()
     data.release_conn()
@@ -78,7 +59,7 @@ def clean_cloud_warehouse(input_path=None, output_path=None, **kwargs):
 
     client.put_object(
         bucket_name,
-        output_path,
+        output_object,
         data=buffer,
         length=buffer.getbuffer().nbytes,
         content_type="application/octet-stream",

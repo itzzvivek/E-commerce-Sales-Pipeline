@@ -3,7 +3,7 @@ from io import BytesIO
 
 def clean_international_sale(client, bucket_name, input_object, output_object, **kwargs):
     data = client.get_object(bucket_name, input_object)
-    df = pd.read_csv(BytesIO(response.read()))
+    df = pd.read_csv(BytesIO(data.read()))
     data.close()
     data.release_conn()
 

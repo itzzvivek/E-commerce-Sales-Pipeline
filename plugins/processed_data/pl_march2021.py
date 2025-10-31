@@ -1,10 +1,9 @@
-from minio import Minio
 import pandas as pd
 from io import BytesIO
 
 def clean_pl_march2021(client, bucket_name, input_object, output_object, **kwargs):
     data = client.get_object(bucket_name, input_object)
-    df = pd.read_csv(BytesIO(data.read()))
+    df = pd.read_csv(BytesIO(data.read()), encoding='utf-8', on_bad_lines='skip')
     data.close()
     data.release_conn()
 
@@ -24,31 +23,34 @@ def clean_pl_march2021(client, bucket_name, input_object, output_object, **kwarg
         'limeroad_mrp', 'myntra_mrp', 'paytm_mrp', 'snapdeal_mrp'
     ]
 
-
     for col in numeric_cols:
-        df[col] = (
-            df[col].astype(str)
-            .str.replace(',', '')
-            .str.replace('₹', '')
-            .str.strip()
-    )
-    df[col] = pd.to_numeric(df[col], errors='coerce')
+        if col in df.columns:
+            df[col] = (
+                df[col].astype(str)
+                .str.replace(',', '')
+                .str.replace('₹', '')
+                .str.strip()
+            )
+            df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    df = df.fillna({col: 0 for col in numeric_cols})
+    df = df.fillna({col: 0 for col in numeric_cols if col in df.columns})
 
-    df['price_diff_amazon_flipkart'] = df['amazon_mrp'] - df['flipkart_mrp']
-    df['avg_mrp'] = df[[
-    'ajio_mrp', 'amazon_mrp', 'amazon_fba_mrp', 'flipkart_mrp',
-    'limeroad_mrp', 'myntra_mrp', 'paytm_mrp', 'snapdeal_mrp'
-    ]].mean(axis=1)
+    if all(col in df.columns for col in ['amazon_mrp', 'flipkart_mrp']):
+        df['price_diff_amazon_flipkart'] = df['amazon_mrp'] - df['flipkart_mrp']
+
+    valid_avg_cols = [col for col in [
+        'ajio_mrp', 'amazon_mrp', 'amazon_fba_mrp', 'flipkart_mrp',
+        'limeroad_mrp', 'myntra_mrp', 'paytm_mrp', 'snapdeal_mrp'
+    ] if col in df.columns]
+
+    if valid_avg_cols:
+        df['avg_mrp'] = df[valid_avg_cols].mean(axis=1)
 
     df = df.drop_duplicates()
 
-    df['sku'] = df['sku'].astype(str)
-    df['style_id'] = df['style_id'].astype(str)
-    df['catalog'] = df['catalog'].astype(str)
-    df['category'] = df['category'].astype(str)
-
+    for col in ['sku', 'style_id', 'catalog', 'category']:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
 
     buffer = BytesIO()
     df.to_parquet(buffer, index=False, engine="pyarrow")
@@ -62,7 +64,4 @@ def clean_pl_march2021(client, bucket_name, input_object, output_object, **kwarg
         content_type="application/octet-stream"
     )
 
-    print(f"Cleaned data saved to: s3://{bucket_name}/{output_object}")
-
-if __name__ == "__main__":
-    clean_pl_march2021()
+    print(f"✅ Cleaned data saved to: s3://{bucket_name}/{output_object}")
