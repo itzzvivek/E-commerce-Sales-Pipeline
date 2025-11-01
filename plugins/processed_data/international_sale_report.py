@@ -64,7 +64,7 @@ def clean_international_sale(client, bucket_name, input_object, output_object, *
         content_type="application/octet-stream"
     )
 
-    print(f"Cleaned data uploaded to MinIO: {bucket_name}/{processed_file}")
+    print(f"Cleaned data uploaded to MinIO: {bucket_name}/{output_object}")
     print(f"Final shape: {df.shape}")
 
 if __name__ == "__main__":
