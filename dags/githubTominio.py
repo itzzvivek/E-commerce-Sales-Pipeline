@@ -77,7 +77,7 @@ def run_transformation(clean_func, input_file, output_file):
     print(f"Starting transformation: {clean_func.__name__}")
     clean_func(
         client=minio_client,
-        bucket_name=BUCKET_NAME,
+        bucket_name=BUCKET_NAME,    
         input_object=input_path,
         output_object=output_path
     )
@@ -131,7 +131,7 @@ with DAG(
     pl_march_2021_task = PythonOperator(
         task_id="transform_pl_march_2021.csv",
         python_callable=run_transformation,
-        op_args=[clean_pl_march2021, "P L March 2021.csv", "pl_march_2021.parquet"]
+        op_args=[clean_pl_march2021, "P  L March 2021.csv", "pl_march_2021.parquet"]
     )
 
     upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task, pl_march_2021_task]
