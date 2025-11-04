@@ -6,3 +6,5 @@ minio
 pandas
 requests
 pyarrow
+duckdb
+postgresql
