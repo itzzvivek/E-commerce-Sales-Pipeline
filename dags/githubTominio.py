@@ -15,6 +15,8 @@ from processed_data.may_2022 import clean_may_2022
 from processed_data.pl_march2021 import clean_pl_march2021
 from processed_data.sale_report import clean_sales_report
 
+from processed_data.validation import validation_parquet
+
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
@@ -84,6 +86,11 @@ def run_transformation(clean_func, input_file, output_file):
     )
     print(f"Transformation complete: {clean_func.__name__}")
 
+def data_validation(input_file, **kwargs):
+    input_path = f"{PROCESSED_FOLDER}/{input_file}"
+    print(f"Validating data for: {input_file}")
+    return validate_parquet(client=minio_client, bucket_name=BUCKET_NAME, input_object=input_path, **kwargs)
+
 
 with DAG(
     dag_id="github_to_minio_pipeline",
@@ -141,4 +148,12 @@ with DAG(
         op_args=[clean_sales_report, "Sale Report.csv", "sale_report.parquet"]
     )
 
+
+    validation_amazon = PythonOperator(
+        task_id="validate_amazon_sales",
+        python_callable=data_validation,
+        op_args=["amazon_sales.parquet", None]
+    )
+
     upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task, pl_march_2021_task, sale_report_task]
+    amazon_sales_task >> validation_amazon

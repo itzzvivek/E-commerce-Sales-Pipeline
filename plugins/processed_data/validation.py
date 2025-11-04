@@ -39,5 +39,16 @@ def validation_parquet(client, bucket_name, input_object, **kwargs):
                 "nulls": int(s.isnull().sum()),
             }
     results["numeric_summary"] = num_stats
+
+    print("=== Validation summary ===")
+    print(f"Rows: {results['rows']}")
+    print(f"Columns: {len(results['columns'])}")
+    print("Null counts (sample):")
+    for k, v in list(results["null_counts"].items())[:10]:
+        print(f"  {k}: {v}")
+    if results["duplicate_pk_count"] is not None:
+        print(f"Duplicate pk rows: {results['duplicate_pk_count']}")
+    print("Numeric summary keys:", list(num_stats.keys())[:10])
+    print("Sample rows:", results["sample"][:1])
     
     return results
