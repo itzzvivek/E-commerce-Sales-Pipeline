@@ -7,4 +7,5 @@ pandas
 requests
 pyarrow
 duckdb
-postgresql
+psycopg2
+psycopg2-binary

@@ -106,6 +106,8 @@ with DAG(
         python_callable=upload_github_files,
     )
 
+    # Transformation Tasks
+
     amazon_sales_task = PythonOperator(
         task_id="transform_amazon_sales",
         python_callable=run_transformation,
@@ -148,12 +150,22 @@ with DAG(
         op_args=[clean_sales_report, "Sale Report.csv", "sale_report.parquet"]
     )
 
+    # Data Validation Task
 
     validation_amazon = PythonOperator(
         task_id="validate_amazon_sales",
         python_callable=data_validation,
         op_args=["amazon_sales.parquet", None]
     )
+    
+    # load to DuckDB Task
+
+    load_amazon_duckdb = PythonOperator(
+        task_id="load_amazon_to_duckdb",
+        python_callable=data_validation,
+        op_args=["amazon_sales.parquet", "fact_amazon_sales"]
+    )
+
 
     upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task, pl_march_2021_task, sale_report_task]
-    amazon_sales_task >> validation_amazon
+    amazon_sales_task >> validation_amazon >> load_amazon_duckdb
