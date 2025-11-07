@@ -16,6 +16,7 @@ from processed_data.pl_march2021 import clean_pl_march2021
 from processed_data.sale_report import clean_sales_report
 
 from processed_data.validation import validation_parquet
+from processed_data.load_duckdb import load_parquet_to_duckdb
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -89,7 +90,7 @@ def run_transformation(clean_func, input_file, output_file):
 def data_validation(input_file, **kwargs):
     input_path = f"{PROCESSED_FOLDER}/{input_file}"
     print(f"Validating data for: {input_file}")
-    return validate_parquet(client=minio_client, bucket_name=BUCKET_NAME, input_object=input_path, **kwargs)
+    return validation_parquet(client=minio_client, bucket_name=BUCKET_NAME, input_object=input_path, **kwargs)
 
 
 with DAG(
@@ -162,8 +163,14 @@ with DAG(
 
     load_amazon_duckdb = PythonOperator(
         task_id="load_amazon_to_duckdb",
-        python_callable=data_validation,
-        op_args=["amazon_sales.parquet", "fact_amazon_sales"]
+        python_callable=load_parquet_to_duckdb,
+        op_Kwargs={
+            "client": minio_client,
+            "bucket_name": BUCKET_NAME,
+            "input_object": f"{PROCESSED_FOLDER}/amazon_sales.parquet",
+            "output_db": "/opt/airflow/data/ecommerce.duckdb",
+            "table_name": "fact_amazon_sales"
+        }
     )
 
 

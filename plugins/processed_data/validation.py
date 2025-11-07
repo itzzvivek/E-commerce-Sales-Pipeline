@@ -1,10 +1,10 @@
 from io import BytesIO
 import pandas as pd
-
+import numpy as np
 
 def validation_parquet(client, bucket_name, input_object, **kwargs):
     pk = kwargs.get('pk')
-    smaple_rows = kwargs.get('sample_rows', 5)
+    sample_rows = kwargs.get('sample_rows', 5)
 
     obj = client.get_object(bucket_name, input_object)
     try:
@@ -18,7 +18,14 @@ def validation_parquet(client, bucket_name, input_object, **kwargs):
     results["columns"] = df.columns.tolist()
     results["null_counts"] = df.isnull().sum().to_dict()
     results["dtypes"] = df.dtypes.astype(str).to_dict()
-    results["sample"] = df.head(sample_rows).to_dict(orient="records")
+
+    sample = df.head(sample_rows).copy()
+    for col in sample.columns:
+        if pd.api.types.is_datetime64_any_dtype(sample[col]):
+            sample[col] = sample[col].astype(str)
+        else:
+            sample[col] = sample[col].replace({np.nan: None})
+    results["sample"] = sample.to_dict(orient="records")
 
     if pk:
         if isinstance(pk, str):
@@ -38,6 +45,7 @@ def validation_parquet(client, bucket_name, input_object, **kwargs):
                 "mean": float(s.mean()) if not s.empty else None,
                 "nulls": int(s.isnull().sum()),
             }
+            break
     results["numeric_summary"] = num_stats
 
     print("=== Validation summary ===")
@@ -48,7 +56,7 @@ def validation_parquet(client, bucket_name, input_object, **kwargs):
         print(f"  {k}: {v}")
     if results["duplicate_pk_count"] is not None:
         print(f"Duplicate pk rows: {results['duplicate_pk_count']}")
-    print("Numeric summary keys:", list(num_stats.keys())[:10])
+    print("Numeric summary keys:", list(num_stats.keys()))
     print("Sample rows:", results["sample"][:1])
-    
+
     return results
