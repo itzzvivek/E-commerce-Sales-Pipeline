@@ -1,11 +1,8 @@
 apache-airflow
 boto3
-pyspark
 duckdb
 minio
 pandas
 requests
 pyarrow
-duckdb
-psycopg2
 psycopg2-binary
