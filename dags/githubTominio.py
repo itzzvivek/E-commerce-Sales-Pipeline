@@ -164,7 +164,7 @@ with DAG(
     load_amazon_duckdb = PythonOperator(
         task_id="load_amazon_to_duckdb",
         python_callable=load_parquet_to_duckdb,
-        op_Kwargs={
+        op_kwargs={
             "client": minio_client,
             "bucket_name": BUCKET_NAME,
             "input_object": f"{PROCESSED_FOLDER}/amazon_sales.parquet",
