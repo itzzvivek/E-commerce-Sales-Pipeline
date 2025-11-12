@@ -2,8 +2,6 @@ from io import BytesIO
 import pandas as pd
 import duckdb
 
-print("DuckDB version:", duckdb.__version__)
-
 def load_parquet_to_duckdb(client, bucket_name, input_object, output_db="/opt/airflow/data/ecommerce.duckdb", table_name=None, **kwargs):
     if table_name is None:
         table_name = (
