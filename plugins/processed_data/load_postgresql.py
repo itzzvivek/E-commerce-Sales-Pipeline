@@ -2,6 +2,8 @@ import duckdb
 import pandas as pd
 from sqlalchemy import create_engine
 
+import os
+
 def load_duckdb_to_postgres(
     duckdb_path="/opt/airflow/data/ecommerce.duckdb",
     table_name=None,
@@ -10,6 +12,16 @@ def load_duckdb_to_postgres(
     if_exists="replace",
     **kwargs
 ):
+    POSTGRESS_HOST = os.getenv("POSTGRESS_HOST", "postgres")
+    POSTGRESS_PORT = os.getenv("POSTGRESS_PORT", 5432)
+    POSTGRESS_USER = os.getenv("POSTGRESS_USER", "airflow")
+    POSTGRESS_PASSWORD = os.getenv("POSTGRESS_PASSWORD", "airflow")
+    POSTGRESS_DB = os.getenv("POSTGRESS_DB", "ecommerce_db")
+
+    postgres_conn = (f"postgresql+psycopg2://{POSTGRESS_USER}:{POSTGRESS_PASSWORD}"
+                     f"@{POSTGRESS_HOST}:{POSTGRESS_PORT}/{POSTGRESS_DB}"
+            )
+
     """
     Load a table from DuckDB into PostgreSQL.
     """
@@ -21,7 +33,6 @@ def load_duckdb_to_postgres(
         postgres_conn = "postgresql+psycopg2://airflow:airflow@postgres:5432/ecommerce_db"
 
     conn = duckdb.connect(duckdb_path)
-
     df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
     conn.close()
 
@@ -30,7 +41,6 @@ def load_duckdb_to_postgres(
         return {"rows": 0, "table": table_name}
 
     engine = create_engine(postgres_conn)
-
     if postgres_table is None:
         postgres_table = table_name
 
