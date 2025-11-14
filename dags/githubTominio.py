@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
+
 import os
 import requests
 from urllib.parse import unquote
@@ -17,7 +18,10 @@ from processed_data.sale_report import clean_sales_report
 
 from processed_data.validation import validation_parquet
 from processed_data.load_duckdb import load_parquet_to_duckdb
+from processed_data.load_postgresql import load_duckdb_to_postgres
 
+
+postgress_conn = os.getenv("POSTGRES_CONN")
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
@@ -87,10 +91,10 @@ def run_transformation(clean_func, input_file, output_file):
     )
     print(f"Transformation complete: {clean_func.__name__}")
 
-def data_validation(input_file, **kwargs):
+def data_validation(input_file, *args, **kwargs):
     input_path = f"{PROCESSED_FOLDER}/{input_file}"
     print(f"Validating data for: {input_file}")
-    return validation_parquet(client=minio_client, bucket_name=BUCKET_NAME, input_object=input_path, **kwargs)
+    return validation_parquet(client=minio_client, bucket_name=BUCKET_NAME, input_object=input_path)
 
 
 with DAG(
@@ -173,6 +177,19 @@ with DAG(
         }
     )
 
+    #load to Postgres Task
+
+    load_amazon_postgres = PythonOperator(
+    task_id="load_amazon_to_postgres",
+    python_callable=load_duckdb_to_postgres,
+    op_kwargs={
+        "duckdb_path": "/opt/airflow/data/ecommerce.duckdb",
+        "table_name": "fact_amazon_sales",
+        "postgres_table": "fact_amazon_sales",
+        "if_exists": "replace"
+    }
+)
+
 
     upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task, pl_march_2021_task, sale_report_task]
-    amazon_sales_task >> validation_amazon >> load_amazon_duckdb
+    amazon_sales_task >> validation_amazon >> load_amazon_duckdb >> load_amazon_postgres

@@ -67,6 +67,14 @@ x-airflow-common:
     # AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 1
 
     _PIP_ADDITIONAL_REQUIREMENTS: "minio requests duckdb"
+
+    # ✔ Added PostgreSQL connection variables
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_USER: airflow
+    POSTGRES_PASSWORD: airflow
+    POSTGRES_DB: airflow
+    
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
