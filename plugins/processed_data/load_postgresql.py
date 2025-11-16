@@ -29,8 +29,6 @@ def load_duckdb_to_postgres(
     if table_name is None:
         raise ValueError("`table_name` is required (name of table inside DuckDB).")
 
-    if postgres_conn is None:
-        postgres_conn = "postgresql+psycopg2://airflow:airflow@postgres:5432/ecommerce_db"
 
     conn = duckdb.connect(duckdb_path)
     df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
@@ -47,7 +45,7 @@ def load_duckdb_to_postgres(
     with engine.begin() as connection:
         df.to_sql(postgres_table, connection, index=False, if_exists=if_exists)
 
-    print(f"✅ Loaded {len(df)} rows from DuckDB → PostgreSQL table `{postgres_table}`")
+    print(f"✅ Loaded {len(df)} rows: DuckDB `{table_name}` → PostgreSQL table `{postgres_table}`")
 
     return {
         "rows": len(df),
