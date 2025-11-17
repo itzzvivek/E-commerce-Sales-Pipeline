@@ -156,11 +156,22 @@ with DAG(
     )
 
     # Data Validation Task
-
     validation_amazon = PythonOperator(
         task_id="validate_amazon_sales",
         python_callable=data_validation,
         op_args=["amazon_sales.parquet"]
+    )
+
+    validation_cloud_warehouse = PythonOperator(
+        task_id="validation_cloud_warehouse",
+        python_callble=data_validation,
+        op_args=["cloud_warehouse.parquet"]
+    )
+
+    validation_expense = PythonOperator(
+        task_id="validation_expense",
+        python_callable=data_validation,
+        op_args=["expense.parquet"]
     )
     
     # load to DuckDB Task
@@ -178,7 +189,7 @@ with DAG(
     )
 
     #load to Postgres Task
-
+    
     load_amazon_postgres = PythonOperator(
     task_id="load_amazon_to_postgres",
     python_callable=load_duckdb_to_postgres,
