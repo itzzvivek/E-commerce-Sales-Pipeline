@@ -162,17 +162,6 @@ with DAG(
         op_args=["amazon_sales.parquet"]
     )
 
-    validation_cloud_warehouse = PythonOperator(
-        task_id="validation_cloud_warehouse",
-        python_callble=data_validation,
-        op_args=["cloud_warehouse.parquet"]
-    )
-
-    validation_expense = PythonOperator(
-        task_id="validation_expense",
-        python_callable=data_validation,
-        op_args=["expense.parquet"]
-    )
     
     # load to DuckDB Task
 
