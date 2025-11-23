@@ -14,7 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 FROM apache/superset:latest
+
 USER root
-RUN pip install psycopg2-binary
+RUN pip install --upgrade pip
+RUN pip install psycopg2-binary sqlalchemy psycopg2
 USER superset
+
 
