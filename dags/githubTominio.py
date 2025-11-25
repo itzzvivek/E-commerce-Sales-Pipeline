@@ -21,13 +21,12 @@ from processed_data.load_duckdb import load_parquet_to_duckdb
 from processed_data.load_postgresql import load_duckdb_to_postgres
 
 
-postgress_conn = os.getenv("POSTGRES_CONN")
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
 
 minio_client = Minio(
-    MINIO_ENDPOINT.replace("http://", "").replace("https://", ""),
+    endpoint=MINIO_ENDPOINT.replace("http://", "").replace("https://", ""),
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
     secure=False
