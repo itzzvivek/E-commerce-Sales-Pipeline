@@ -6,6 +6,7 @@ import os
 import requests
 from urllib.parse import unquote
 from minio import Minio
+from minio.credentials import StaticProvider
 
 
 from processed_data.amazon_sales import clean_amazon_sales
@@ -26,9 +27,8 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
 
 minio_client = Minio(
-    endpoint=MINIO_ENDPOINT.replace("http://", "").replace("https://", ""),
-    access_key=MINIO_ACCESS_KEY,
-    secret_key=MINIO_SECRET_KEY,
+    MINIO_ENDPOINT.replace("http://", "").replace("https://", ""),
+    credentials=StaticProvider(MINIO_ACCESS_KEY,MINIO_SECRET_KEY),
     secure=False
 )
 
@@ -74,6 +74,7 @@ def upload_github_files():
 
         except Exception as e:
             print(f"Failed to upload {file_name}: {e}")
+
 
 
 def run_transformation(clean_func, input_file, output_file):
