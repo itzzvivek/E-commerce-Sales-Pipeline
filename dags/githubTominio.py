@@ -144,7 +144,7 @@ with DAG(
     )
 
     pl_march_2021_task = PythonOperator(
-        task_id="transform_pl_march_2021.csv",
+        task_id="transform_pl_march_2021",
         python_callable=run_transformation,
         op_args=[clean_pl_march2021, "P  L March 2021.csv", "pl_march_2021.parquet"]
     )
@@ -187,7 +187,8 @@ with DAG(
         "table_name": "fact_amazon_sales",
         "postgres_table": "fact_amazon_sales",
         "if_exists": "replace"
-    }
+        }
+    )
 
     notify_success_task = PythonOperator(
         task_id="notify_success",
@@ -196,7 +197,7 @@ with DAG(
             details="All tasks completed successfully."
         )
 
-)
+    )
 
 
     upload_task >> [amazon_sales_task, cloud_warehouse_task, expense_task, international_sales_task, may_2022_task, pl_march_2021_task, sale_report_task]
